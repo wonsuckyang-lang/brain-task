@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>업무관리 — 행정사법인 브레인</title>
+<style>
+  :root {
+    --primary: #1a3a6b;
+    --primary-light: #2d5aa0;
+    --accent: #e8f0fe;
+    --success: #1e8a4c;
+    --success-bg: #e6f4ec;
+    --danger: #c0392b;
+    --danger-bg: #fdecea;
+    --warn: #e67e22;
+    --warn-bg: #fef3e2;
+    --gray: #f4f6fb;
+    --border: #dde3ef;
+    --text: #1a1a2e;
+    --text-soft: #5a6481;
+    --shadow: 0 2px 12px rgba(26,58,107,0.10);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#eef1f8; color:var(--text); min-height:100vh; }
+
+  /* ── Header ── */
+  header { background:var(--primary); color:white; padding:16px 20px 12px; position:sticky; top:0; z-index:100; box-shadow:0 2px 10px rgba(0,0,0,0.18); }
+  .header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .logo { font-size:11px; opacity:0.7; }
+  header h1 { font-size:19px; font-weight:700; }
+  .header-right { display:flex; align-items:center; gap:8px; }
+  .header-stats { display:flex; gap:8px; font-size:13px; }
+  .stat-badge { background:rgba(255,255,255,0.15); padding:4px 10px; border-radius:20px; font-weight:600; }
+  .stat-badge.done { background:rgba(30,138,76,0.35); }
+
+  /* Sync Status */
+  .sync-btn {
+    width:34px; height:34px; border-radius:50%; border:none; background:rgba(255,255,255,0.15);
+    color:white; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    -webkit-tap-highlight-color:transparent; transition:background 0.2s; flex-shrink:0;
+  }
+  .sync-btn:active { background:rgba(255,255,255,0.3); }
+  .sync-btn.spinning { animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .sync-status-bar {
+    font-size:12px; padding:4px 10px; border-radius:20px;
+    font-weight:600; display:inline-flex; align-items:center; gap:5px;
+    background:rgba(255,255,255,0.12);
+  }
+  .sync-status-bar.ok   { background:rgba(30,138,76,0.35); }
+  .sync-status-bar.err  { background:rgba(192,57,43,0.45); }
+  .sync-status-bar.busy { background:rgba(255,255,255,0.15); }
+  .sync-status-bar.none { background:rgba(255,255,255,0.10); opacity:0.7; }
+
+  /* Settings icon */
+  .settings-btn {
+    width:34px; height:34px; border-radius:50%; border:none; background:rgba(255,255,255,0.15);
+    color:white; font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* ── Filter ── */
+  .filter-bar { display:flex; gap:8px; padding:12px 16px; background:white; border-bottom:1px solid var(--border); overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .filter-bar::-webkit-scrollbar { display:none; }
+  .tab { flex-shrink:0; padding:7px 16px; border-radius:20px; border:1.5px solid var(--border); background:var(--gray); font-size:14px; font-weight:600; color:var(--text-soft); cursor:pointer; white-space:nowrap; transition:all 0.2s; }
+  .tab.active { background:var(--primary); color:white; border-color:var(--primary); }
+
+  /* ── Main ── */
+  .main { padding:14px 14px 100px; max-width:680px; margin:0 auto; }
+
+  /* ── Case Card ── */
+  .case-card { background:white; border-radius:var(--radius); margin-bottom:14px; box-shadow:var(--shadow); border:1.5px solid var(--border); overflow:hidden; }
+  .case-card.all-done { border-color:#b7dfc8; opacity:0.82; }
+  .case-card.has-overdue { border-color:#f0b8b2; }
+
+  .case-header { display:flex; align-items:center; gap:12px; padding:14px 16px 12px; cursor:pointer; border-bottom:1px solid var(--border); background:var(--gray); }
+  .case-icon { width:40px; height:40px; border-radius:10px; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .case-card.all-done .case-icon { background:var(--success); }
+  .case-card.has-overdue .case-icon { background:var(--danger); }
+  .case-info { flex:1; min-width:0; }
+  .case-name { font-size:17px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .case-card.all-done .case-name { text-decoration:line-through; color:var(--text-soft); }
+  .case-meta { display:flex; gap:8px; margin-top:4px; align-items:center; flex-wrap:wrap; }
+  .meta-tag { font-size:12px; color:var(--text-soft); }
+  .progress-pill { font-size:12px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--accent); color:var(--primary); }
+  .case-card.all-done .progress-pill { background:var(--success-bg); color:var(--success); }
+  .case-card.has-overdue .progress-pill { background:var(--danger-bg); color:var(--danger); }
+  .chevron { font-size:14px; color:var(--text-soft); transition:transform 0.2s; flex-shrink:0; }
+  .chevron.open { transform:rotate(180deg); }
+
+  /* ── Task List ── */
+  .task-list { display:none; }
+  .task-list.open { display:block; }
+
+  .subtask-row { display:flex; align-items:flex-start; gap:10px; padding:12px 16px; border-bottom:1px solid var(--border); }
+  .subtask-row.done-row { background:#fafffe; }
+  .sub-check { width:26px; height:26px; border-radius:50%; border:2.5px solid var(--border); background:white; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; margin-top:1px; transition:all 0.2s; -webkit-tap-highlight-color:transparent; }
+  .sub-check.checked { background:var(--success); border-color:var(--success); color:white; }
+  .sub-content { flex:1; min-width:0; }
+  .sub-text { font-size:15px; font-weight:600; color:var(--text); line-height:1.4; word-break:keep-all; }
+  .subtask-row.done-row .sub-text { text-decoration:line-through; color:var(--text-soft); }
+  .sub-due { display:inline-flex; align-items:center; gap:4px; margin-top:4px; font-size:12px; }
+  .due-badge { font-size:11px; font-weight:700; padding:2px 7px; border-radius:20px; margin-left:4px; }
+  .due-badge.ok    { background:var(--success-bg); color:var(--success); }
+  .due-badge.warn  { background:var(--warn-bg); color:var(--warn); }
+  .due-badge.over  { background:var(--danger-bg); color:var(--danger); }
+  .due-badge.done-lbl { background:var(--success-bg); color:var(--success); }
+  .due-date-text { color:var(--text-soft); }
+  .sub-delete { width:28px; height:28px; border-radius:50%; border:none; background:none; color:#bbb; font-size:16px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; margin-top:1px; }
+  .sub-delete:active { color:var(--danger); }
+
+  .card-footer { display:flex; gap:8px; padding:10px 16px 12px; border-top:1px solid var(--border); background:var(--gray); }
+  .btn-add-sub { flex:1; padding:9px; background:var(--accent); color:var(--primary); border:none; border-radius:var(--radius-sm); font-size:14px; font-weight:700; cursor:pointer; }
+  .btn-edit-case { padding:9px 14px; background:white; color:var(--text-soft); border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:14px; font-weight:700; cursor:pointer; }
+  .btn-del-case { padding:9px 14px; background:var(--danger-bg); color:var(--danger); border:none; border-radius:var(--radius-sm); font-size:14px; font-weight:700; cursor:pointer; }
+
+  .memo-row { padding:10px 16px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:flex-start; }
+  .memo-label { font-size:12px; font-weight:700; color:var(--primary); padding-top:1px; width:32px; flex-shrink:0; }
+  .memo-text { font-size:13px; color:var(--text-soft); line-height:1.5; }
+
+  /* ── FAB ── */
+  .fab { position:fixed; bottom:24px; right:20px; width:60px; height:60px; background:var(--primary); color:white; border:none; border-radius:50%; font-size:28px; box-shadow:0 4px 18px rgba(26,58,107,0.35); cursor:pointer; z-index:200; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; transition:transform 0.15s; }
+  .fab:active { transform:scale(0.93); }
+
+  /* ── Modal Base ── */
+  .modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:600; align-items:flex-end; justify-content:center; }
+  .modal-backdrop.open { display:flex; }
+  .modal { background:white; border-radius:20px 20px 0 0; width:100%; max-width:680px; max-height:94vh; overflow-y:auto; padding:0 0 30px; animation:slideUp 0.25s ease; }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:12px auto 0; }
+  .modal-header { padding:16px 20px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:white; z-index:10; }
+  .modal-title { font-size:18px; font-weight:700; }
+  .modal-close { width:32px; height:32px; background:var(--gray); border:none; border-radius:50%; font-size:18px; cursor:pointer; color:var(--text-soft); display:flex; align-items:center; justify-content:center; }
+  .modal-body { padding:18px 20px; }
+  .form-group { margin-bottom:18px; }
+  .form-row { display:flex; gap:10px; }
+  .form-row .form-group { flex:1; }
+  .form-label { display:block; font-size:13px; font-weight:700; color:var(--primary); margin-bottom:7px; }
+  .form-input, .form-textarea { width:100%; padding:13px 14px; border:2px solid var(--border); border-radius:var(--radius-sm); font-size:16px; color:var(--text); font-family:inherit; background:white; transition:border-color 0.2s; -webkit-appearance:none; }
+  .form-input:focus, .form-textarea:focus { outline:none; border-color:var(--primary); }
+  .form-textarea { resize:vertical; min-height:70px; line-height:1.5; }
+
+  .subtask-section-title { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
+  .btn-add-sub-modal { padding:4px 12px; background:var(--accent); color:var(--primary); border:none; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; }
+  .sub-editor { border:2px solid var(--border); border-radius:var(--radius-sm); margin-bottom:10px; overflow:hidden; }
+  .sub-editor-row { display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--border); background:white; }
+  .sub-editor-num { width:22px; height:22px; border-radius:50%; background:var(--primary); color:white; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .sub-editor-text { flex:1; border:none; font-size:15px; font-family:inherit; color:var(--text); outline:none; background:transparent; padding:2px 0; }
+  .sub-editor-del { color:#bbb; font-size:18px; background:none; border:none; cursor:pointer; padding:2px 4px; flex-shrink:0; }
+  .sub-editor-due-row { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--gray); }
+  .sub-due-label { font-size:12px; color:var(--text-soft); font-weight:600; white-space:nowrap; }
+  .sub-due-input { flex:1; border:1.5px solid var(--border); border-radius:6px; padding:6px 10px; font-size:14px; font-family:inherit; background:white; color:var(--text); -webkit-appearance:none; }
+  .sub-due-input:focus { outline:none; border-color:var(--primary); }
+
+  .btn-submit { width:100%; padding:16px; background:var(--primary); color:white; border:none; border-radius:var(--radius-sm); font-size:17px; font-weight:700; cursor:pointer; margin-top:4px; transition:background 0.2s; }
+  .btn-submit:active { background:var(--primary-light); }
+
+  /* Sub-modal */
+  .sub-modal-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:700; align-items:flex-end; justify-content:center; }
+  .sub-modal-backdrop.open { display:flex; }
+  .sub-modal { background:white; border-radius:20px 20px 0 0; width:100%; max-width:680px; padding:0 0 30px; animation:slideUp 0.25s ease; }
+
+  /* ── Settings Modal ── */
+  .section-title { font-size:14px; font-weight:700; color:var(--primary); margin:4px 0 14px; padding-bottom:8px; border-bottom:2px solid var(--accent); }
+  .info-box { background:var(--accent); border-radius:var(--radius-sm); padding:14px; margin-bottom:18px; font-size:14px; line-height:1.7; color:var(--primary); }
+  .info-box strong { font-weight:700; }
+  .info-box a { color:var(--primary-light); font-weight:700; }
+  .step-list { list-style:none; counter-reset:steps; }
+  .step-list li { counter-increment:steps; display:flex; gap:10px; margin-bottom:10px; font-size:14px; line-height:1.5; }
+  .step-list li::before { content:counter(steps); width:22px; height:22px; background:var(--primary); color:white; border-radius:50%; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+  .btn-row { display:flex; gap:8px; margin-top:6px; }
+  .btn-secondary { flex:1; padding:13px; background:var(--gray); color:var(--text); border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:15px; font-weight:700; cursor:pointer; }
+  .btn-primary-outline { flex:1; padding:13px; background:var(--accent); color:var(--primary); border:none; border-radius:var(--radius-sm); font-size:15px; font-weight:700; cursor:pointer; }
+  .sync-result { margin-top:12px; padding:12px 14px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; display:none; }
+  .sync-result.ok  { background:var(--success-bg); color:var(--success); display:block; }
+  .sync-result.err { background:var(--danger-bg); color:var(--danger); display:block; }
+
+  /* ── Drawer ── */
+  .drawer-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:500; }
+  .drawer-backdrop.open { display:block; }
+  .drawer {
+    position:fixed; top:0; left:-280px; bottom:0; width:280px;
+    background:white; z-index:501; transition:left 0.28s ease;
+    display:flex; flex-direction:column; box-shadow:4px 0 20px rgba(0,0,0,0.15);
+  }
+  .drawer.open { left:0; }
+  .drawer-head {
+    background:var(--primary); color:white;
+    padding:22px 20px 18px; flex-shrink:0;
+  }
+  .drawer-logo { font-size:11px; opacity:0.7; margin-bottom:4px; }
+  .drawer-title { font-size:18px; font-weight:700; }
+  .drawer-phone { font-size:13px; opacity:0.8; margin-top:3px; }
+  .drawer-body { flex:1; overflow-y:auto; padding:10px 0; }
+  .drawer-section { padding:8px 20px 4px; font-size:11px; font-weight:700; color:var(--text-soft); letter-spacing:0.8px; text-transform:uppercase; }
+  .drawer-item {
+    display:flex; align-items:center; gap:14px;
+    padding:14px 20px; font-size:15px; font-weight:600; color:var(--text);
+    cursor:pointer; border:none; background:none; width:100%; text-align:left;
+    -webkit-tap-highlight-color:transparent; transition:background 0.15s;
+  }
+  .drawer-item:active { background:var(--gray); }
+  .drawer-item .di-icon { font-size:20px; width:26px; text-align:center; flex-shrink:0; }
+  .drawer-item .di-desc { font-size:12px; color:var(--text-soft); font-weight:400; margin-top:1px; }
+  .drawer-divider { height:1px; background:var(--border); margin:6px 20px; }
+  .drawer-foot { padding:16px 20px; border-top:1px solid var(--border); font-size:12px; color:var(--text-soft); flex-shrink:0; }
+
+  /* ── Empty */
+  .empty { text-align:center; padding:60px 20px; color:var(--text-soft); }
+  .empty-icon { font-size:48px; margin-bottom:14px; }
+  .empty-text { font-size:16px; font-weight:600; }
+  .empty-sub { font-size:14px; margin-top:6px; opacity:0.7; }
+
+  @media (min-width:640px) {
+    .main { padding:20px 20px 80px; }
+    .modal, .sub-modal { border-radius:16px; margin-bottom:40px; }
+    .modal-backdrop, .sub-modal-backdrop { align-items:center; }
+    .modal-handle { display:none; }
+    .fab { bottom:32px; right:32px; width:64px; height:64px; font-size:30px; }
+    header { padding:18px 24px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="openDrawer()" style="background:rgba(255,255,255,0.18);border:none;color:white;width:36px;height:36px;border-radius:10px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;-webkit-tap-highlight-color:transparent" title="메뉴">☰</button>
+      <div>
+        <div class="logo" id="h-logo">행정사법인 브레인</div>
+        <h1 id="h-title">📋 업무관리</h1>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="sync-btn" id="sync-btn" onclick="manualSync()" title="지금 동기화">☁️</button>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+    <div class="header-stats">
+      <div class="stat-badge" id="stat-total">수임 0</div>
+      <div class="stat-badge done" id="stat-done">완료 0</div>
+    </div>
+    <div class="sync-status-bar none" id="sync-status">☁️ 동기화 미설정</div>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <button class="tab active" onclick="setFilter('all',this)">전체</button>
+  <button class="tab" onclick="setFilter('pending',this)">진행중</button>
+  <button class="tab" onclick="setFilter('overdue',this)">기한초과</button>
+  <button class="tab" onclick="setFilter('done',this)">완료</button>
+</div>
+
+<div class="main" id="case-list"></div>
+<button class="fab" onclick="openCaseModal()">＋</button>
+
+<!-- ── 드로어 메뉴 ── -->
+<div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="drawer-logo" id="d-logo">행정사법인 브레인</div>
+    <div class="drawer-title" id="d-title">📋 업무관리</div>
+    <div class="drawer-phone" id="d-phone"></div>
+  </div>
+  <div class="drawer-body">
+
+    <div class="drawer-section">업무</div>
+    <button class="drawer-item" onclick="drawerThen(openCaseModal)">
+      <span class="di-icon">➕</span>
+      <div><div>새 수임 추가</div><div class="di-desc">새로운 수임 등록</div></div>
+    </button>
+
+    <div class="drawer-divider"></div>
+    <div class="drawer-section">설정</div>
+
+    <button class="drawer-item" onclick="drawerThen(openAppInfoModal)">
+      <span class="di-icon">🏢</span>
+      <div><div>앱 기본정보 수정</div><div class="di-desc">회사명·제목·전화번호 변경</div></div>
+    </button>
+
+    <button class="drawer-item" onclick="drawerThen(openSettings)">
+      <span class="di-icon">☁️</span>
+      <div><div>동기화 설정</div><div class="di-desc">PC·폰 자동 동기화 관리</div></div>
+    </button>
+
+    <div class="drawer-divider"></div>
+    <div class="drawer-section">데이터</div>
+
+    <button class="drawer-item" onclick="drawerThen(exportData)">
+      <span class="di-icon">📤</span>
+      <div><div>내보내기 (백업)</div><div class="di-desc">JSON 파일로 저장</div></div>
+    </button>
+
+    <button class="drawer-item" onclick="drawerThen(()=>document.getElementById('import-file').click())">
+      <span class="di-icon">📥</span>
+      <div><div>가져오기 (복원)</div><div class="di-desc">백업 파일에서 불러오기</div></div>
+    </button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+
+  </div>
+  <div class="drawer-foot" id="d-foot">행정사법인 브레인</div>
+</div>
+
+<!-- ── 앱 기본정보 수정 모달 ── -->
+<div class="modal-backdrop" id="appinfo-modal-backdrop" onclick="closeModalOutside(event,'appinfo-modal-backdrop')">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-header">
+    <div class="modal-title">🏢 앱 기본정보 수정</div>
+    <button class="modal-close" onclick="closeAppInfoModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+      <label class="form-label">🏢 회사명</label>
+      <input type="text" class="form-input" id="ai-company" placeholder="행정사법인 브레인">
+    </div>
+    <div class="form-group">
+      <label class="form-label">📋 앱 제목</label>
+      <input type="text" class="form-input" id="ai-title" placeholder="업무관리">
+    </div>
+    <div class="form-group">
+      <label class="form-label">📞 대표 전화</label>
+      <input type="tel" class="form-input" id="ai-phone" placeholder="031-666-5900" oninput="fmtPhone(this)" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">📍 주소</label>
+      <input type="text" class="form-input" id="ai-address" placeholder="경기도 평택시 관광특구로 32">
+    </div>
+    <button class="btn-submit" onclick="saveAppInfo()">저장하기</button>
+  </div>
+</div>
+</div>
+
+<!-- ── Case Modal ── -->
+<div class="modal-backdrop" id="case-modal-backdrop" onclick="closeModalOutside(event,'case-modal-backdrop')">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-header">
+    <div class="modal-title" id="case-modal-title">새 수임 추가</div>
+    <button class="modal-close" onclick="closeCaseModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="edit-case-id">
+    <div class="form-group">
+      <label class="form-label">📅 수임일자</label>
+      <input type="date" class="form-input" id="f-date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">📌 수임명</label>
+      <input type="text" class="form-input" id="f-case" placeholder="예) 영업허가 취소 행정심판">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">👤 위임자 성명</label>
+        <input type="text" class="form-input" id="f-client" placeholder="홍길동">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📞 전화번호</label>
+        <input type="tel" class="form-input" id="f-phone" placeholder="010-0000-0000" oninput="fmtPhone(this)" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="subtask-section-title">
+        <span>📝 세부업무 <span style="font-weight:400;color:var(--text-soft)">(업무별 완료기한)</span></span>
+        <button class="btn-add-sub-modal" onclick="addSubEditor()">＋ 추가</button>
+      </div>
+      <div id="sub-editors"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📎 기타</label>
+      <textarea class="form-textarea" id="f-memo" placeholder="특이사항, 메모 등"></textarea>
+    </div>
+    <button class="btn-submit" onclick="saveCase()">저장하기</button>
+  </div>
+</div>
+</div>
+
+<!-- ── Sub-task Modal ── -->
+<div class="sub-modal-backdrop" id="sub-modal-backdrop" onclick="closeModalOutside(event,'sub-modal-backdrop')">
+<div class="sub-modal">
+  <div class="modal-handle"></div>
+  <div class="modal-header">
+    <div class="modal-title">세부업무 추가</div>
+    <button class="modal-close" onclick="closeSubModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="sub-target-case-id">
+    <div class="form-group">
+      <label class="form-label">📝 세부업무 내용</label>
+      <textarea class="form-textarea" id="sub-detail-input" placeholder="처리할 업무 내용" style="min-height:80px"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">⏰ 완료기한</label>
+      <input type="date" class="form-input" id="sub-due-input">
+    </div>
+    <button class="btn-submit" onclick="saveSubTask()">추가하기</button>
+  </div>
+</div>
+</div>
+
+<!-- ── Settings Modal ── -->
+<div class="modal-backdrop" id="settings-modal-backdrop" onclick="closeModalOutside(event,'settings-modal-backdrop')">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-header">
+    <div class="modal-title">⚙️ 동기화 설정</div>
+    <button class="modal-close" onclick="closeSettings()">✕</button>
+  </div>
+  <div class="modal-body">
+
+    <div class="section-title">📱 PC ↔ 휴대폰 자동 동기화</div>
+
+    <div class="info-box">
+      <strong>JSONBin.io</strong> 무료 서비스를 사용합니다.<br>
+      아래 순서대로 1회만 설정하면 이후 자동으로 동기화됩니다.
+    </div>
+
+    <ol class="step-list" style="margin-bottom:20px">
+      <li><span><a href="https://jsonbin.io" target="_blank" style="color:var(--primary-light);font-weight:700">jsonbin.io</a> 접속 → 무료 회원가입 (Sign Up)</span></li>
+      <li><span>로그인 후 우측 상단 프로필 → <strong>API Keys</strong> 클릭</span></li>
+      <li><span><strong>SECRET KEY</strong> 복사 → 아래 칸에 붙여넣기</span></li>
+      <li><span><strong>빈(Bin) 자동 생성</strong> 버튼 클릭 → Bin ID 자동 입력됨</span></li>
+      <li><span>저장 후 폰에서도 동일한 앱 파일을 열고 같은 KEY·ID 입력</span></li>
+    </ol>
+
+    <div class="form-group">
+      <label class="form-label">🔑 API Secret Key</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="password" class="form-input" id="s-apikey" placeholder="$2b$10$..."
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1;font-family:monospace;font-size:14px">
+        <button onclick="toggleKeyVisible()" id="key-eye-btn" style="flex:0 0 auto;padding:0 12px;height:48px;border:2px solid var(--border);border-radius:var(--radius-sm);background:var(--gray);font-size:18px;cursor:pointer" title="보기/숨기기">👁</button>
+      </div>
+      <div id="key-preview" style="display:none;margin-top:6px;padding:8px 12px;background:var(--gray);border-radius:var(--radius-sm);font-family:monospace;font-size:12px;color:var(--text-soft);word-break:break-all"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🗂 Bin ID</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="form-input" id="s-binid" placeholder="6831a..."
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          style="flex:1;font-family:monospace;font-size:14px">
+        <button class="btn-primary-outline" style="flex:0 0 auto;padding:0 14px;font-size:13px" onclick="createBin()">자동 생성</button>
+      </div>
+    </div>
+
+    <!-- 이 기기 진단 -->
+    <div id="sync-cfg-info" style="display:none;margin-bottom:14px;border:2px solid var(--primary);border-radius:var(--radius-sm);overflow:hidden">
+      <div style="background:var(--primary);color:white;padding:8px 14px;font-size:13px;font-weight:700">📋 이 기기 설정 확인</div>
+      <div style="padding:12px 14px;background:var(--accent)">
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+          <tr>
+            <td style="color:var(--text-soft);padding:4px 0;width:80px">Bin ID</td>
+            <td style="font-family:monospace;font-weight:700;font-size:12px;word-break:break-all;color:var(--primary)" id="diag-binid">—</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-soft);padding:4px 0">Key 끝 4자리</td>
+            <td style="font-family:monospace;font-weight:700" id="diag-keytail">—</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-soft);padding:4px 0">로컬 건수</td>
+            <td style="font-weight:700" id="diag-local">—</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-soft);padding:4px 0">클라우드</td>
+            <td style="font-weight:700" id="diag-cloud">미확인</td>
+          </tr>
+        </table>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="checkCloud()" style="flex:1;padding:8px;background:var(--primary);color:white;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">🔍 클라우드 확인</button>
+          <button onclick="copyCfg()" style="flex:1;padding:8px;background:white;color:var(--primary);border:1.5px solid var(--primary);border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">📋 설정 복사</button>
+        </div>
+        <div id="copy-ok" style="display:none;color:var(--success);font-size:12px;margin-top:6px;text-align:center">✅ 복사됨 — 카카오톡으로 전송하세요</div>
+      </div>
+    </div>
+
+    <div id="sync-result-msg" class="sync-result"></div>
+
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="testConnection()">연결 테스트</button>
+      <button class="btn-submit" style="margin:0" onclick="saveSettings()">저장</button>
+    </div>
+
+    <!-- 강제 덮어쓰기 -->
+    <div style="margin-top:14px;padding:12px 14px;background:#fff8e1;border-radius:var(--radius-sm);border:1.5px solid #ffe082">
+      <div style="font-size:13px;font-weight:700;color:#b8860b;margin-bottom:8px">⚠️ 데이터 불일치 해결</div>
+      <div style="font-size:12px;color:#795548;margin-bottom:10px;line-height:1.6">PC 내용이 맞으면 → <b>PC→클라우드 덮어쓰기</b><br>폰 내용이 맞으면 → 폰에서 <b>폰→클라우드 덮어쓰기</b></div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="forcePush()" style="background:#fff3e0;border-color:#ffb74d;color:#e65100">이 기기→클라우드 덮어쓰기</button>
+        <button class="btn-secondary" onclick="forcePull()" style="background:#e8f5e9;border-color:#81c784;color:#2e7d32">클라우드→이 기기 덮어쓰기</button>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div class="section-title" style="margin-top:0">🗑 데이터 관리</div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="exportData()">📤 내보내기(백업)</button>
+        <button class="btn-secondary" onclick="document.getElementById('import-file-s').click()">📥 가져오기(복원)</button>
+        <input type="file" id="import-file-s" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  SYNC — JSONBin.io
+// ══════════════════════════════════════
+const SYNC_KEY   = 'brain_sync_cfg';
+const LOCAL_KEY  = 'brain_cases_v2';
+const BIN_BASE   = 'https://api.jsonbin.io/v3/b';
+
+function getSyncCfg() {
+  const cfg = JSON.parse(localStorage.getItem(SYNC_KEY) || '{}');
+  // 항상 앞뒤 공백 제거
+  if (cfg.apiKey) cfg.apiKey = cfg.apiKey.trim();
+  if (cfg.binId)  cfg.binId  = cfg.binId.trim();
+  return cfg;
+}
+function saveSyncCfg(cfg) { localStorage.setItem(SYNC_KEY, JSON.stringify(cfg)); }
+
+function setSyncStatus(state, msg) {
+  const el = document.getElementById('sync-status');
+  const btn = document.getElementById('sync-btn');
+  el.className = 'sync-status-bar ' + state;
+  el.textContent = msg;
+  btn.classList.toggle('spinning', state === 'busy');
+}
+
+async function loadFromRemote() {
+  const { apiKey, binId } = getSyncCfg();
+  if (!apiKey || !binId) { setSyncStatus('none','☁️ 동기화 미설정'); return false; }
+  setSyncStatus('busy','🔄 불러오는 중...');
+  try {
+    // 캐시 완전 우회: no-store + 타임스탬프 쿼리
+    const url = `${BIN_BASE}/${binId}/latest?t=${Date.now()}`;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'X-Master-Key': apiKey,
+        'Cache-Control': 'no-cache, no-store',
+        'Pragma': 'no-cache'
+      }
+    });
+    if (!res.ok) {
+      const msg = res.status === 401 ? '401 — API Key 오류' :
+                  res.status === 403 ? '403 — 접근 거부 (Key 재확인)' :
+                  res.status === 404 ? '404 — Bin ID 오류' : `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    cases = data.record.cases || [];
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(cases));
+    const now = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    setSyncStatus('ok', `✅ ${now} · ${cases.length}건`);
+    render();
+    return true;
+  } catch(e) {
+    const msg = e.message.includes('fetch') ? '네트워크 오류 (인터넷 확인)' : e.message;
+    setSyncStatus('err', `❌ ${msg}`);
+    return false;
+  }
+}
+
+async function saveToRemote() {
+  const { apiKey, binId } = getSyncCfg();
+  if (!apiKey || !binId) return false;
+  setSyncStatus('busy','🔄 저장 중...');
+  try {
+    const res = await fetch(`${BIN_BASE}/${binId}`, {
+      method:'PUT',
+      headers:{ 'X-Master-Key': apiKey, 'Content-Type':'application/json' },
+      body: JSON.stringify({ cases, _saved: new Date().toISOString() })
+    });
+    if (!res.ok) throw new Error(`저장 실패 HTTP ${res.status}`);
+    const now = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    setSyncStatus('ok', `✅ ${now} · ${cases.length}건 저장됨`);
+    return true;
+  } catch(e) {
+    setSyncStatus('err',`❌ ${e.message} (로컬엔 보관됨)`);
+    return false;
+  }
+}
+
+async function manualSync() {
+  await loadFromRemote();
+}
+
+// ── Settings Modal ──
+function openSettings() {
+  const cfg = getSyncCfg();
+  document.getElementById('s-apikey').value = cfg.apiKey || '';
+  document.getElementById('s-binid').value  = cfg.binId  || '';
+  document.getElementById('sync-result-msg').className = 'sync-result';
+  document.getElementById('sync-result-msg').textContent = '';
+  const infoBox = document.getElementById('sync-cfg-info');
+  if (cfg.apiKey && cfg.binId) {
+    infoBox.style.display = 'block';
+    document.getElementById('diag-binid').textContent   = cfg.binId;
+    document.getElementById('diag-keytail').textContent = '…' + cfg.apiKey.slice(-4);
+    document.getElementById('diag-local').textContent   = cases.length + '건';
+    document.getElementById('diag-cloud').textContent   = '미확인';
+    setTimeout(checkCloud, 400); // 모달 열린 뒤 자동 확인
+  } else {
+    infoBox.style.display = 'none';
+  }
+  document.getElementById('copy-ok').style.display = 'none';
+  document.getElementById('settings-modal-backdrop').classList.add('open');
+}
+
+function copyCfg() {
+  const cfg = getSyncCfg();
+  const text = `[브레인 업무관리 동기화 설정]\nAPI Key: ${cfg.apiKey}\nBin ID: ${cfg.binId}\n\n앱 ☰메뉴→동기화설정 열고 위 값을 그대로 입력하세요.`;
+  navigator.clipboard.writeText(text).then(() => {
+    const el = document.getElementById('copy-ok');
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }).catch(() => {
+    prompt('아래 내용을 복사하세요:', text);
+  });
+}
+
+async function checkCloud() {
+  const { apiKey, binId } = getSyncCfg();
+  if (!apiKey || !binId) return;
+  const el = document.getElementById('diag-cloud');
+  el.textContent = '확인 중...'; el.style.color = 'var(--text-soft)';
+  try {
+    const res = await fetch(`${BIN_BASE}/${binId}/latest?t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'X-Master-Key': apiKey, 'Cache-Control': 'no-cache' }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const cnt = (data.record.cases || []).length;
+    const ts  = data.record._saved ? new Date(data.record._saved).toLocaleString('ko-KR') : '기록없음';
+    el.innerHTML = `<span style="color:var(--success);font-weight:700">${cnt}건</span> <span style="font-size:11px;color:var(--text-soft)">(${ts})</span>`;
+  } catch(e) {
+    el.textContent = '오류: ' + e.message; el.style.color = 'var(--danger)';
+  }
+}
+
+async function forcePush() {
+  if (!confirm(`이 기기의 데이터(${cases.length}건)를 클라우드에 덮어씁니다.\n다른 기기의 데이터는 사라집니다. 계속할까요?`)) return;
+  const ok = await saveToRemote();
+  showSyncMsg(ok ? 'ok' : 'err', ok ? `✅ 완료 — 이 기기 ${cases.length}건을 클라우드에 저장했습니다.` : '❌ 저장 실패');
+  checkCloud();
+}
+
+async function forcePull() {
+  if (!confirm('클라우드 데이터로 이 기기를 덮어씁니다.\n이 기기의 데이터는 사라집니다. 계속할까요?')) return;
+  const ok = await loadFromRemote();
+  showSyncMsg(ok ? 'ok' : 'err', ok ? `✅ 완료 — 클라우드 ${cases.length}건을 불러왔습니다.` : '❌ 불러오기 실패');
+  checkCloud();
+}
+function closeSettings() {
+  document.getElementById('settings-modal-backdrop').classList.remove('open');
+}
+
+async function createBin() {
+  const apiKey = document.getElementById('s-apikey').value.trim();
+  if (!apiKey) { showSyncMsg('err','API Secret Key를 먼저 입력해주세요.'); return; }
+  showSyncMsg('ok','⏳ Bin 생성 중...');
+  try {
+    const res = await fetch(BIN_BASE, {
+      method:'POST',
+      headers:{ 'X-Master-Key': apiKey, 'Content-Type':'application/json', 'X-Bin-Name':'Brain-Task-Manager', 'X-Bin-Private':'true' },
+      body: JSON.stringify({ cases })
+    });
+    if (!res.ok) throw new Error('API 키를 확인해 주세요. (오류: ' + res.status + ')');
+    const data = await res.json();
+    document.getElementById('s-binid').value = data.metadata.id;
+    showSyncMsg('ok','✅ Bin 생성 완료! 아래 저장 버튼을 눌러주세요.');
+  } catch(e) {
+    showSyncMsg('err','❌ 실패: ' + e.message);
+  }
+}
+
+async function testConnection() {
+  const apiKey = document.getElementById('s-apikey').value.trim();
+  const binId  = document.getElementById('s-binid').value.trim();
+  if (!apiKey || !binId) { showSyncMsg('err','API Key와 Bin ID를 모두 입력해주세요.'); return; }
+  showSyncMsg('ok',`⏳ 연결 확인 중...\nKey 길이: ${apiKey.length}자 / Bin ID: ${binId}`);
+  try {
+    const res = await fetch(`${BIN_BASE}/${binId}/latest`, { headers:{ 'X-Master-Key': apiKey } });
+    if (!res.ok) {
+      const detail = res.status === 401 ? '401 — API Key가 틀렸습니다' :
+                     res.status === 403 ? '403 — 접근 거부. JSONBin에서 Key를 다시 확인하세요' :
+                     res.status === 404 ? '404 — Bin ID가 틀렸습니다' : `HTTP ${res.status}`;
+      throw new Error(detail);
+    }
+    showSyncMsg('ok','✅ 연결 성공! 동기화가 정상 작동합니다.');
+  } catch(e) {
+    const msg = e.message.includes('fetch') ? '네트워크 오류 — 인터넷 연결을 확인하세요' : e.message;
+    showSyncMsg('err','❌ ' + msg);
+  }
+}
+
+function saveSettings() {
+  const apiKey = document.getElementById('s-apikey').value.trim();
+  const binId  = document.getElementById('s-binid').value.trim();
+  if (!apiKey || !binId) { showSyncMsg('err','API Key와 Bin ID를 모두 입력해주세요.'); return; }
+  saveSyncCfg({ apiKey, binId });
+  showSyncMsg('ok','✅ 설정 저장 완료! 잠시 후 데이터를 불러옵니다.');
+  setTimeout(async () => { closeSettings(); await loadFromRemote(); }, 1200);
+}
+
+function showSyncMsg(type, msg) {
+  const el = document.getElementById('sync-result-msg');
+  el.className = 'sync-result ' + type;
+  el.textContent = msg;
+}
+
+function toggleKeyVisible() {
+  const inp = document.getElementById('s-apikey');
+  const preview = document.getElementById('key-preview');
+  const btn = document.getElementById('key-eye-btn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    preview.style.display = 'block';
+    preview.textContent = inp.value || '(비어 있음)';
+    btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    preview.style.display = 'none';
+    btn.textContent = '👁';
+  }
+}
+
+// ── Export / Import ──
+function exportData() {
+  const blob = new Blob([JSON.stringify({ cases }, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `브레인업무관리_백업_${today()}.json`;
+  a.click();
+}
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data.cases)) throw new Error('형식 오류');
+      if (!confirm(`${data.cases.length}건을 가져옵니다. 기존 데이터는 덮어씁니다. 계속할까요?`)) return;
+      cases = data.cases;
+      saveLocal();
+      await saveToRemote();
+      render();
+      alert('가져오기 완료!');
+    } catch(e) { alert('파일 형식이 올바르지 않습니다.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ══════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════
+let cases = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
+let currentFilter = 'all';
+let editingCaseId = null;
+let subEditorCount = 0;
+
+function saveLocal() { localStorage.setItem(LOCAL_KEY, JSON.stringify(cases)); }
+async function saveData() { saveLocal(); await saveToRemote(); }
+
+function today() { return new Date().toISOString().slice(0,10); }
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,dd] = d.split('-');
+  return `${y}.${m}.${dd}`;
+}
+function daysLeft(due) {
+  if (!due) return null;
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((new Date(due) - now) / 86400000);
+}
+function dueBadge(s) {
+  if (s.done) return `<span class="due-badge done-lbl">완료</span>`;
+  const d = daysLeft(s.due);
+  if (d === null) return '';
+  if (d < 0)  return `<span class="due-badge over">D+${Math.abs(d)} 초과</span>`;
+  if (d === 0) return `<span class="due-badge over">오늘 마감</span>`;
+  if (d <= 3)  return `<span class="due-badge warn">D-${d}</span>`;
+  return `<span class="due-badge ok">D-${d}</span>`;
+}
+function caseStatus(c) {
+  const s = c.tasks || [];
+  if (!s.length) return 'empty';
+  if (s.every(t => t.done)) return 'done';
+  if (s.some(t => !t.done && daysLeft(t.due) !== null && daysLeft(t.due) < 0)) return 'overdue';
+  return 'pending';
+}
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+// ── 전화번호 자동 포맷 ──
+function fmtPhone(el) {
+  const pos = el.selectionStart; // 커서 위치 기억
+  let d = el.value.replace(/\D/g, ''); // 숫자만 추출
+  let v = '';
+  if (d.startsWith('02')) {
+    // 서울 02-XXXX-XXXX
+    if      (d.length <= 2)  v = d;
+    else if (d.length <= 6)  v = d.slice(0,2) + '-' + d.slice(2);
+    else if (d.length <= 9)  v = d.slice(0,2) + '-' + d.slice(2,5) + '-' + d.slice(5);
+    else                     v = d.slice(0,2) + '-' + d.slice(2,6) + '-' + d.slice(6,10);
+  } else {
+    // 일반 XXX-XXXX-XXXX (010, 031 등)
+    if      (d.length <= 3)  v = d;
+    else if (d.length <= 7)  v = d.slice(0,3) + '-' + d.slice(3);
+    else                     v = d.slice(0,3) + '-' + d.slice(3,7) + '-' + d.slice(7,11);
+  }
+  el.value = v;
+  // 커서가 뒤로 밀리지 않도록 보정
+  const diff = v.length - el.value.length;
+  try { el.setSelectionRange(pos + diff, pos + diff); } catch(e) {}
+}
+
+// ══════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function render() {
+  const list = document.getElementById('case-list');
+  let filtered = cases;
+  if (currentFilter === 'pending')  filtered = cases.filter(c => ['pending','empty'].includes(caseStatus(c)));
+  else if (currentFilter === 'overdue') filtered = cases.filter(c => caseStatus(c) === 'overdue');
+  else if (currentFilter === 'done') filtered = cases.filter(c => caseStatus(c) === 'done');
+
+  const order = { overdue:0, pending:1, empty:2, done:3 };
+  filtered = [...filtered].sort((a,b) => order[caseStatus(a)] - order[caseStatus(b)]);
+
+  document.getElementById('stat-total').textContent = `수임 ${cases.length}`;
+  document.getElementById('stat-done').textContent  = `완료 ${cases.filter(c => caseStatus(c)==='done').length}`;
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📂</div><div class="empty-text">업무가 없습니다</div><div class="empty-sub">＋ 버튼을 눌러 새 수임을 추가하세요</div></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(c => {
+    const st = caseStatus(c);
+    const subs = c.tasks || [];
+    const doneCnt = subs.filter(s => s.done).length;
+    const cardClass = st==='done' ? ' all-done' : st==='overdue' ? ' has-overdue' : '';
+    const icon = st==='done' ? '✓' : st==='overdue' ? '⚠' : '📁';
+
+    const subsHtml = subs.map(s => `
+      <div class="subtask-row ${s.done?'done-row':''}">
+        <button class="sub-check ${s.done?'checked':''}" onclick="toggleSub('${c.id}','${s.id}')">${s.done?'✓':''}</button>
+        <div class="sub-content">
+          <div class="sub-text">${esc(s.detail)||'(내용 없음)'}</div>
+          <div class="sub-due">
+            ${s.due ? `<span class="due-date-text">⏰ ${fmtDate(s.due)}</span>` : '<span class="due-date-text" style="color:#bbb">기한 미설정</span>'}
+            ${dueBadge(s)}
+          </div>
+        </div>
+        <button class="sub-delete" onclick="deleteSub('${c.id}','${s.id}')">×</button>
+      </div>`).join('');
+
+    const memoHtml = c.memo ? `<div class="memo-row"><div class="memo-label">기타</div><div class="memo-text">${esc(c.memo).replace(/\n/g,'<br>')}</div></div>` : '';
+
+    return `
+    <div class="case-card${cardClass}" id="card-${c.id}">
+      <div class="case-header" onclick="toggleCard('${c.id}')">
+        <div class="case-icon">${icon}</div>
+        <div class="case-info">
+          <div class="case-name">${esc(c.case)||'(수임명 없음)'}</div>
+          <div class="case-meta">
+            <span class="meta-tag">🗓 ${fmtDate(c.date)}</span>
+            ${c.client ? `<span class="meta-tag">👤 ${esc(c.client)}</span>` : ''}
+            ${c.phone  ? `<a class="meta-tag" href="tel:${esc(c.phone)}" onclick="event.stopPropagation()" style="color:var(--primary-light);font-weight:600;text-decoration:none">📞 ${esc(c.phone)}</a>` : ''}
+            <span class="progress-pill">${doneCnt}/${subs.length} 완료</span>
+          </div>
+        </div>
+        <span class="chevron" id="chev-${c.id}">▼</span>
+      </div>
+      <div class="task-list" id="tasks-${c.id}">
+        ${subsHtml || '<div style="padding:16px;text-align:center;color:var(--text-soft);font-size:14px">세부업무를 추가하세요</div>'}
+        ${memoHtml}
+        <div class="card-footer">
+          <button class="btn-add-sub" onclick="openSubModal('${c.id}')">＋ 세부업무 추가</button>
+          <button class="btn-edit-case" onclick="openEditCase('${c.id}')">✏</button>
+          <button class="btn-del-case" onclick="deleteCase('${c.id}')">삭제</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Card Toggle ──
+function toggleCard(id) {
+  document.getElementById('tasks-'+id).classList.toggle('open');
+  document.getElementById('chev-'+id).classList.toggle('open');
+}
+function reopenCard(id) {
+  setTimeout(() => {
+    const tl = document.getElementById('tasks-'+id);
+    const ch = document.getElementById('chev-'+id);
+    if (tl && !tl.classList.contains('open')) { tl.classList.add('open'); ch&&ch.classList.add('open'); }
+  }, 20);
+}
+
+// ── Toggle / Delete ──
+async function toggleSub(caseId, subId) {
+  const c = cases.find(c=>c.id===caseId);
+  const s = c?.tasks?.find(s=>s.id===subId);
+  if (s) { s.done = !s.done; await saveData(); render(); reopenCard(caseId); }
+}
+async function deleteSub(caseId, subId) {
+  if (!confirm('이 세부업무를 삭제할까요?')) return;
+  const c = cases.find(c=>c.id===caseId);
+  if (c) { c.tasks = c.tasks.filter(s=>s.id!==subId); await saveData(); render(); reopenCard(caseId); }
+}
+async function deleteCase(id) {
+  if (!confirm('이 수임 전체를 삭제할까요?')) return;
+  cases = cases.filter(c=>c.id!==id);
+  await saveData(); render();
+}
+
+// ── Case Modal ──
+function openCaseModal() {
+  editingCaseId = null;
+  document.getElementById('case-modal-title').textContent = '새 수임 추가';
+  document.getElementById('edit-case-id').value = '';
+  document.getElementById('f-date').value = today();
+  document.getElementById('f-case').value = '';
+  document.getElementById('f-client').value = '';
+  document.getElementById('f-phone').value = '';
+  document.getElementById('f-memo').value = '';
+  subEditorCount = 0;
+  document.getElementById('sub-editors').innerHTML = '';
+  addSubEditor();
+  document.getElementById('case-modal-backdrop').classList.add('open');
+  setTimeout(()=>document.getElementById('f-case').focus(), 300);
+}
+function openEditCase(id) {
+  const c = cases.find(c=>c.id===id);
+  if (!c) return;
+  editingCaseId = id;
+  document.getElementById('case-modal-title').textContent = '수임 수정';
+  document.getElementById('edit-case-id').value = id;
+  document.getElementById('f-date').value = c.date||today();
+  document.getElementById('f-case').value = c.case||'';
+  document.getElementById('f-client').value = c.client||'';
+  document.getElementById('f-phone').value = c.phone||'';
+  document.getElementById('f-memo').value = c.memo||'';
+  subEditorCount = 0;
+  document.getElementById('sub-editors').innerHTML = '';
+  const subs = c.tasks||[];
+  if (subs.length) subs.forEach(s=>addSubEditor(s.detail,s.due));
+  else addSubEditor();
+  document.getElementById('case-modal-backdrop').classList.add('open');
+}
+function closeCaseModal() { document.getElementById('case-modal-backdrop').classList.remove('open'); }
+
+function closeModalOutside(e, id) {
+  if (e.target.id === id) {
+    if (id==='case-modal-backdrop') closeCaseModal();
+    else if (id==='sub-modal-backdrop') closeSubModal();
+    else if (id==='settings-modal-backdrop') closeSettings();
+    else if (id==='appinfo-modal-backdrop') closeAppInfoModal();
+  }
+}
+
+// ── 드로어 ──
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-backdrop').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').classList.remove('open');
+}
+// 드로어 닫힌 뒤(300ms) 모달 열기 — 타이밍 충돌 방지
+function drawerThen(fn) {
+  closeDrawer();
+  setTimeout(fn, 300);
+}
+
+// ── 앱 기본정보 ──
+const APP_INFO_KEY = 'brain_app_info';
+function getAppInfo() {
+  return JSON.parse(localStorage.getItem(APP_INFO_KEY) || '{}');
+}
+function applyAppInfo() {
+  const info = getAppInfo();
+  const company = info.company || '행정사법인 브레인';
+  const title   = info.title   || '업무관리';
+  const phone   = info.phone   || '';
+  const address = info.address || '';
+  // 헤더
+  document.getElementById('h-logo').textContent  = company;
+  document.getElementById('h-title').textContent = '📋 ' + title;
+  // 드로어
+  document.getElementById('d-logo').textContent  = company;
+  document.getElementById('d-title').textContent = '📋 ' + title;
+  document.getElementById('d-phone').textContent = phone ? '📞 ' + phone : '';
+  document.getElementById('d-foot').textContent  = address || company;
+  // 페이지 제목
+  document.title = title + ' — ' + company;
+}
+function openAppInfoModal() {
+  const info = getAppInfo();
+  document.getElementById('ai-company').value = info.company || '행정사법인 브레인';
+  document.getElementById('ai-title').value   = info.title   || '업무관리';
+  document.getElementById('ai-phone').value   = info.phone   || '031-666-5900';
+  document.getElementById('ai-address').value = info.address || '경기도 평택시 관광특구로 32';
+  document.getElementById('appinfo-modal-backdrop').classList.add('open');
+}
+function closeAppInfoModal() {
+  document.getElementById('appinfo-modal-backdrop').classList.remove('open');
+}
+function saveAppInfo() {
+  const info = {
+    company: document.getElementById('ai-company').value.trim() || '행정사법인 브레인',
+    title:   document.getElementById('ai-title').value.trim()   || '업무관리',
+    phone:   document.getElementById('ai-phone').value.trim(),
+    address: document.getElementById('ai-address').value.trim(),
+  };
+  localStorage.setItem(APP_INFO_KEY, JSON.stringify(info));
+  applyAppInfo();
+  closeAppInfoModal();
+}
+
+function addSubEditor(text='', due='') {
+  subEditorCount++;
+  const n = subEditorCount;
+  const div = document.createElement('div');
+  div.className = 'sub-editor';
+  div.id = 'sub-ed-'+n;
+  div.innerHTML = `
+    <div class="sub-editor-row">
+      <div class="sub-editor-num">${n}</div>
+      <input class="sub-editor-text" placeholder="세부업무 내용 입력" value="${esc(text)}">
+      <button class="sub-editor-del" onclick="removeSubEditor(${n})">×</button>
+    </div>
+    <div class="sub-editor-due-row">
+      <span class="sub-due-label">⏰ 완료기한</span>
+      <input type="date" class="sub-due-input" value="${due}">
+    </div>`;
+  document.getElementById('sub-editors').appendChild(div);
+  div.querySelector('.sub-editor-text').focus();
+}
+function removeSubEditor(n) { document.getElementById('sub-ed-'+n)?.remove(); }
+
+async function saveCase() {
+  const caseName = document.getElementById('f-case').value.trim();
+  if (!caseName) { alert('수임명을 입력해주세요.'); document.getElementById('f-case').focus(); return; }
+
+  const tasks = [];
+  document.querySelectorAll('.sub-editor').forEach(ed => {
+    const text = ed.querySelector('.sub-editor-text').value.trim();
+    const due  = ed.querySelector('.sub-due-input').value;
+    if (text) tasks.push({ id:uid(), detail:text, due, done:false });
+  });
+
+  const base = {
+    date: document.getElementById('f-date').value||today(),
+    case: caseName,
+    client: document.getElementById('f-client').value.trim(),
+    phone: document.getElementById('f-phone').value.trim(),
+    memo: document.getElementById('f-memo').value.trim(),
+  };
+
+  if (editingCaseId) {
+    const idx = cases.findIndex(c=>c.id===editingCaseId);
+    if (idx!==-1) {
+      const oldTasks = cases[idx].tasks||[];
+      const merged = tasks.map(nt => {
+        const old = oldTasks.find(ot=>ot.detail===nt.detail);
+        return old ? { ...nt, id:old.id, done:old.done } : nt;
+      });
+      cases[idx] = { ...cases[idx], ...base, tasks:merged };
+    }
+  } else {
+    cases.unshift({ id:uid(), ...base, tasks });
+  }
+
+  await saveData(); closeCaseModal(); render();
+}
+
+// ── Sub-task Modal ──
+function openSubModal(caseId) {
+  document.getElementById('sub-target-case-id').value = caseId;
+  document.getElementById('sub-detail-input').value = '';
+  document.getElementById('sub-due-input').value = '';
+  document.getElementById('sub-modal-backdrop').classList.add('open');
+  setTimeout(()=>document.getElementById('sub-detail-input').focus(), 300);
+}
+function closeSubModal() { document.getElementById('sub-modal-backdrop').classList.remove('open'); }
+async function saveSubTask() {
+  const caseId = document.getElementById('sub-target-case-id').value;
+  const detail = document.getElementById('sub-detail-input').value.trim();
+  if (!detail) { alert('세부업무 내용을 입력해주세요.'); return; }
+  const due = document.getElementById('sub-due-input').value;
+  const c = cases.find(c=>c.id===caseId);
+  if (c) {
+    if (!c.tasks) c.tasks = [];
+    c.tasks.push({ id:uid(), detail, due, done:false });
+    await saveData(); closeSubModal(); render(); reopenCard(caseId);
+  }
+}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+(async () => {
+  applyAppInfo();
+  render();
+  const cfg = getSyncCfg();
+  if (cfg.apiKey && cfg.binId) {
+    await loadFromRemote();
+  } else {
+    setSyncStatus('none', '☁️ 동기화 미설정');
+  }
+})();
+</script>
+</body>
+</html>
